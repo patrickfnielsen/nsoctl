@@ -13,8 +13,9 @@ import (
 
 var (
 	// Used for flags.
-	cfgFile string
-	cfg     config.Config
+	cfgFile   string
+	debugFlag bool
+	cfg       config.Config
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -40,7 +41,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-
+	rootCmd.PersistentFlags().BoolVarP(&debugFlag, "debug", "d", false, "enabled to show debug output")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.nsoctl.toml)")
 }
 
@@ -62,11 +63,15 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		log.Printf("Using config file: %s", viper.ConfigFileUsed())
+		if debugFlag {
+			log.Printf("Using config file: %s", viper.ConfigFileUsed())
+		}
 	}
 
 	if err := viper.Unmarshal(&cfg); err != nil {
-		log.Printf("Couldn't read config: %s", err)
+		if debugFlag {
+			log.Printf("Couldn't read config: %s", err)
+		}
 	}
 
 	// if needed disable tls verification
