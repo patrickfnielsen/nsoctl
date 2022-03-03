@@ -75,6 +75,11 @@ nsoctl service <id> [flags]
 		}
 
 		defer resp.Body.Close()
+		if resp.StatusCode == 404 {
+			spinner.Warning("No service found...")
+			return
+		}
+
 		spinner.Success()
 		pterm.Println(data)
 	},
