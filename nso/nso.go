@@ -65,24 +65,22 @@ func (nso NSO) getBody(resp *http.Response) (body string, err error) {
 
 func (nso NSO) Post(url string, body io.Reader) (response *NSOResponse, err error) {
 	resp, err := nso.request("POST", url, body)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return nil, err
 	}
 
+	defer resp.Body.Close()
 	data, err := nso.getBody(resp)
 	return &NSOResponse{resp.StatusCode, data}, err
 }
 
 func (nso NSO) Get(url string) (response *NSOResponse, err error) {
 	resp, err := nso.request("GET", url, nil)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return nil, err
 	}
 
+	defer resp.Body.Close()
 	data, err := nso.getBody(resp)
 	return &NSOResponse{resp.StatusCode, data}, err
 }
