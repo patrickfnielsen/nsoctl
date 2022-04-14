@@ -1,6 +1,5 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
+Copyright © 2022 Patrick Falk Nielsen <git@patricknielsen.dk>
 */
 package main
 

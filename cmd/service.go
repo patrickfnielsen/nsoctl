@@ -1,6 +1,5 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
+Copyright © 2022 Patrick Falk Nielsen <git@patricknielsen.dk>
 */
 package cmd
 
@@ -17,6 +16,42 @@ var (
 	redeploy   bool
 	undeploy   bool
 )
+
+func redeployService(nso *nso.NSO, serviceId string) {
+	spinner, _ := pterm.DefaultSpinner.Start("Redeploying service...")
+	if err := nso.Redeploy(nsoService, serviceId); err == nil {
+		spinner.Success("Service re-deployed succesfully")
+	} else {
+		spinner.Fail(err)
+	}
+}
+
+func undeployService(nso *nso.NSO, serviceId string) {
+	spinner, _ := pterm.DefaultSpinner.Start("Undeploying service...")
+	if err := nso.Undeploy(nsoService, serviceId); err == nil {
+		spinner.Success("Service un-deployed succesfully")
+	} else {
+		spinner.Fail(err)
+	}
+}
+
+func getServiceData(nso *nso.NSO, serviceId string) {
+	spinner, _ := pterm.DefaultSpinner.Start("Getting service...")
+	url := fmt.Sprintf("/restconf/data/tailf-ncs:services/%s:%s=%s", nsoService, nsoService, serviceId)
+	resp, err := nso.Get(url)
+	if err != nil {
+		spinner.Fail(err)
+		return
+	}
+
+	if resp.StatusCode == 404 {
+		spinner.Warning("No service found...")
+		return
+	}
+
+	spinner.Success()
+	pterm.Println(resp.Data)
+}
 
 // serviceCmd represents the service command
 var serviceCmd = &cobra.Command{
@@ -37,51 +72,18 @@ nsoctl service <id> [flags]
 
 		// re-deploy a service in NSO
 		if redeploy {
-			spinner, _ := pterm.DefaultSpinner.Start("Redeploying service...")
-			if err := instance.Redeploy(nsoService, serviceId); err == nil {
-				spinner.Success("Service re-deployed succesfully")
-			} else {
-				spinner.Fail(err)
-			}
-
+			redeployService(&instance, serviceId)
 			return
 		}
 
 		// un-deploy a service in NSO
 		if undeploy {
-			spinner, _ := pterm.DefaultSpinner.Start("Undeploying service...")
-			if err := instance.Undeploy(nsoService, serviceId); err == nil {
-				spinner.Success("Service un-deployed succesfully")
-			} else {
-				spinner.Fail(err)
-			}
-
+			undeployService(&instance, serviceId)
 			return
 		}
 
 		// no flags default is to get the service
-		spinner, _ := pterm.DefaultSpinner.Start("Getting service...")
-		url := fmt.Sprintf("/restconf/data/tailf-ncs:services/%s:%s=%s", nsoService, nsoService, serviceId)
-		resp, err := instance.Get(url)
-		if err != nil {
-			spinner.Fail(err)
-			return
-		}
-
-		data, err := instance.GetBody(resp)
-		if err != nil {
-			spinner.Fail(err)
-			return
-		}
-
-		defer resp.Body.Close()
-		if resp.StatusCode == 404 {
-			spinner.Warning("No service found...")
-			return
-		}
-
-		spinner.Success()
-		pterm.Println(data)
+		getServiceData(&instance, serviceId)
 	},
 }
 

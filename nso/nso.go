@@ -1,3 +1,6 @@
+/*
+Copyright © 2022 Patrick Falk Nielsen <git@patricknielsen.dk>
+*/
 package nso
 
 import (
@@ -14,6 +17,11 @@ type NSO struct {
 	Username string
 	Password string
 	Timeout  time.Duration
+}
+
+type NSOResponse struct {
+	StatusCode int
+	Data       string
 }
 
 func (nso NSO) getBasicAuthString() string {
@@ -45,7 +53,7 @@ func (nso NSO) request(method string, url string, body io.Reader) (resp *http.Re
 	return resp, err
 }
 
-func (nso NSO) GetBody(resp *http.Response) (body string, err error) {
+func (nso NSO) getBody(resp *http.Response) (body string, err error) {
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -55,23 +63,33 @@ func (nso NSO) GetBody(resp *http.Response) (body string, err error) {
 	return string(bodyBytes), err
 }
 
-func (nso NSO) Post(url string, body io.Reader) (resp *http.Response, err error) {
-	resp, err = nso.request("POST", url, body)
+func (nso NSO) Post(url string, body io.Reader) (response *NSOResponse, err error) {
+	resp, err := nso.request("POST", url, body)
+	defer resp.Body.Close()
 
-	return resp, err
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := nso.getBody(resp)
+	return &NSOResponse{resp.StatusCode, data}, err
 }
 
-func (nso NSO) Get(url string) (resp *http.Response, err error) {
-	resp, err = nso.request("GET", url, nil)
+func (nso NSO) Get(url string) (response *NSOResponse, err error) {
+	resp, err := nso.request("GET", url, nil)
+	defer resp.Body.Close()
 
-	return resp, err
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := nso.getBody(resp)
+	return &NSOResponse{resp.StatusCode, data}, err
 }
 
 func (nso NSO) Redeploy(service string, id string) (err error) {
 	url := fmt.Sprintf("/restconf/data/tailf-ncs:services/%s:%s=%s/re-deploy", service, service, id)
 	resp, err := nso.Post(url, nil)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return fmt.Errorf("Failed to re-deploy service, error: %s", err)
 	}
@@ -86,8 +104,6 @@ func (nso NSO) Redeploy(service string, id string) (err error) {
 func (nso NSO) Undeploy(service string, id string) (err error) {
 	url := fmt.Sprintf("/restconf/data/tailf-ncs:services/%s:%s=%s/un-deploy", service, service, id)
 	resp, err := nso.Post(url, nil)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return fmt.Errorf("Failed to un-deploy service, error: %s", err)
 	}

@@ -1,6 +1,5 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
+Copyright © 2022 Patrick Falk Nielsen <git@patricknielsen.dk>
 */
 package cmd
 
@@ -15,6 +14,28 @@ import (
 var (
 	syncFrom bool
 )
+
+func syncFromDevice(nso *nso.NSO, deviceName string) {
+	spinner, _ := pterm.DefaultSpinner.Start("Starting sync-from on device...")
+	if err := nso.SyncFromDevice(deviceName); err == nil {
+		spinner.Success(deviceName + " has been synced!")
+	} else {
+		spinner.Fail(err)
+	}
+}
+
+func getDeviceConfig(nso *nso.NSO, deviceName string) {
+	spinner, _ := pterm.DefaultSpinner.Start("Getting device config...")
+	url := fmt.Sprintf("/restconf/data/tailf-ncs:devices/device=%s/config/", deviceName)
+	resp, err := nso.Get(url)
+	if err != nil {
+		spinner.Fail(err)
+		return
+	}
+
+	spinner.Success()
+	pterm.Println(resp.Data)
+}
 
 // deviceCmd represents the service command
 var deviceCmd = &cobra.Command{
@@ -34,34 +55,12 @@ nsoctl device <name> [flags]
 		}
 
 		if syncFrom {
-			spinner, _ := pterm.DefaultSpinner.Start("Starting sync-from on device...")
-			if err := instance.SyncFromDevice(deviceName); err == nil {
-				spinner.Success(deviceName + " has been synced!")
-			} else {
-				spinner.Fail(err)
-			}
-
+			syncFromDevice(&instance, deviceName)
 			return
 		}
 
 		// no flags default is to get the device
-		spinner, _ := pterm.DefaultSpinner.Start("Getting device config...")
-		url := fmt.Sprintf("/restconf/data/tailf-ncs:devices/device=%s/config/", deviceName)
-		resp, err := instance.Get(url)
-		if err != nil {
-			spinner.Fail(err)
-			return
-		}
-
-		data, err := instance.GetBody(resp)
-		if err != nil {
-			spinner.Fail(err)
-			return
-		}
-
-		defer resp.Body.Close()
-		spinner.Success()
-		pterm.Println(data)
+		getDeviceConfig(&instance, deviceName)
 	},
 }
 

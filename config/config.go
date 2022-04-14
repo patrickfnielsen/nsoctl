@@ -1,3 +1,6 @@
+/*
+Copyright © 2022 Patrick Falk Nielsen <git@patricknielsen.dk>
+*/
 package config
 
 type NsoConfig struct {
